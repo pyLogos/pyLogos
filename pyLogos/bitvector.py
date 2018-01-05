@@ -13,8 +13,14 @@ from pyLogos.util import widthu
 class BitVector(object):
     '''
         like the std_logic_vector in VHDL the BitVector is an array of Bits
-        with shortcuts, i.e. 
+        with shortcuts, i.e. to speed up simulation we keep a local integer
+        value as long as this BitVector has not been 'sliced', in which case we
+        delegate some actions to the underlying list of 'Bits'
     '''
+    # using __slots__ to keep the size of the object as small as possible
+    # because we will have a lot of them
+    __slots__ = ('value', 'min', 'max')
+
     def __init__(self, widthspecifier, value=0):
         '''
             widthspecifier:
@@ -67,9 +73,9 @@ class BitVector(object):
                 
                 # then raise an exception
                 raise ValueError('Unhandled Width Specifier {} for BitVector'.format(widthspecifier))
-        
-        self.value = value
-            
+
+            # check the value!
+            self.value = value
 
     @property
     def nbits(self):

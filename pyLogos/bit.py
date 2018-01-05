@@ -1,5 +1,5 @@
 '''    
-pyLogos is inspired by MyHDL but loosely modeled after VHDL
+pyLogos is inspired by MyHDL (see README) but loosely modeled after VHDL
     
     This file is part of the pyLogos library, a Python package for using
     Python as a Hardware Description Language.
@@ -25,59 +25,37 @@ Created on Dec 15, 2017
 @author: josy
 '''
 
-from util import showwarning
-
 
 class Bit(object):
     ''' 
         the basis of all logic
-        it has three values: 0, 1 or 'Z'
+        it has only two values: 0 or 1
     '''
 
     # using __slots__ to keep the size of the object as small as possible
-    __slots__ = ('value', 'tristate', '_warningcount')
+    # because we will have a lot of them
+    __slots__ = ('_value')
 
-    def __init__(self, value=None, tristate=None):
+    def __init__(self, value=None):
         '''
-            value: 0, 1 or 'Z', if None defaults to 0
-            tristate: in the case of a physical (FPGA) pin, reading back a tristated pin
-                      either returns a high or a low, when pull-up or pull-down resistors are specified
-                      if no pull-up or pull-down is implemented we don't actually know what to do;
-                      so we are going to infer a 0, but in simulation will issue a warning (once)
-                      ('PullUp', PullDown', None)
+            value: 0 or 1, if None defaults to 0
         '''
-        self.value = value if value is not None else 0
-        self.tristate = tristate
-        self._warningcount = 0
+        assert value in (None, 0, 1), 'A \'Bit\' must be either (0, 1, None)'
+        self._value = value if value is not None else 0
 
     @property
     def nbits(self):
         return 1
-
-    # helper function(s)
-    def _assess(self):
-        if self.value == 'Z':
-            if self.tristate is not None:
-                return 1 if self.tristate == 'PullUp' else 0
-            else:
-                # echo a warning (in blue) only once
-                if self._warningcount == 0:
-                    showwarning('{} without pull-up or pull-down will assume \'0\''.format(repr(self)))
-                self._warningcount += 1
-                # then assume a pull-down
-                return 0
-        else:
-            return self.value
 
     def _bool(self, other):
         return 0 if other == 0 else 1
 
     # representation
     def __str__(self):
-        return '{}'.format(self._assess())
+        return '{}'.format(self._value)
 
     def __repr__(self):
-        return 'Bit: {}{}'.format(self.value, '' if self.tristate is None else ' {}'.format(self.tristate))
+        return 'Bit: {}'.format(self._value)
 
     def __len__(self):
         return 1
@@ -85,90 +63,81 @@ class Bit(object):
     # operations
     # return 0 or 1
     def __neg__(self):
-        return 0 if self._assess() else 1
+        return 0 if self._value else 1
 
     def __invert__(self):
-        return 0 if self._assess() else 1
+        return 0 if self._value else 1
 
     def __bool__(self):
-        return self._assess() == 1
+        return self._value == 1
 
     def __int__(self):
-        return int(self._assess())
+        return int(self._value)
 
     def __float__(self):
-        return float(self._assess())
+        return float(self._value)
 
     def __and__(self, other):
         if isinstance(other, Bit):
-            return self._assess() and other._assess()
+            return self._value and other._value
         else:
-            return self._assess() and self._bool(other)
+            return self._value and self._bool(other)
 
     def __or__(self, other):
         if isinstance(other, Bit):
-            return self._assess() or other._assess()
+            return self._value or other._value
         else:
-            return self._assess() or self._bool(other)
+            return self._value or self._bool(other)
 
     def __rand__(self, other):
-        return self._bool(other) and self._assess()
+        return self._bool(other) and self._value
 
     def __ror__(self, other):
-        return self._bool(other) or self._assess()
+        return self._bool(other) or self._value
 
     def __xor__(self, other):
         if isinstance(other, Bit):
-            return self._assess() ^ other._assess()
+            return self._value ^ other._value
         else:
-            return self._assess() ^ self._bool(other)
+            return self._value ^ self._bool(other)
 
     def __rxor__(self, other):
-        return self._bool(other) ^ self._assess()
+        return self._bool(other) ^ self._value
 
     # comparisons
     # deliver True or False
     def __eq__(self, other):
         if isinstance(other, Bit):
-            return self._assess() == other._assess()
+            return self._value == other._value
         else:
-            return self._assess() == other
+            return self._value == other
 
     def __ne__(self, other):
         if isinstance(other, Bit):
-            return self._assess() != other._assess()
+            return self._value != other._value
         else:
-            return self._assess() != other
+            return self._value != other
 
 
 if __name__ == '__main__':
     a = Bit()
     b = Bit(1)
-    tu = Bit('Z', tristate='PullUp')
-    td = Bit('Z', tristate='PullDown')
-    tn = Bit('Z', tristate=None)
 
     print(' a:', repr(a))
     print(' b:', repr(b))
-    print('tu:', repr(tu), '->', tu)
-    print('td:', repr(td), '->', td)
-    print('tn:', repr(tn), '->', tn)
 
     print('-a:', -a)
     print('~b:', ~b)
 
-    print('a or tu:', a or tu)
-    print('a | tu:', a | tu)
-    print('td and b:', td and b)
+    print('a or b:', a or b)
+    print('a | tbu:', a | b)
+    print('a and b:', a and b)
 
-    print('a == tu:', a == tu)
-    print('b == td:', b == td)
-    print('b == tn:', b == tn)
+    print('a == b:', a == b)
     print('a == 0:', a == 0)
-    print('tu == 1:', tu == 1)
-    print('tu ^ a:', tu ^ a)
-    print('tu ^ b:', tu ^ b)
-    print('tu ^ 0:', tu ^ 0)
-    print('tu ^ 3:', tu ^ 3)
+    print('b == 1:', b == 1)
+    print('b ^ a:', b ^ a)
+    print('a ^ b:', a ^ b)
+    print('b ^ 0:', b ^ 0)
+    print('b ^ 3:', b ^ 3)
 
-    print(tn._warningcount)
